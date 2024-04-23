@@ -373,13 +373,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _mapWidth: 36
   _mapHeight: 20
-  _biomeSizes: 10
-  _mapOffest: {x: 20, y: 15}
-  _forestHeightThreshold: 0.6
-  _swampHeightThreshold: 0.4
+  _biomeSizes: 8
+  _mapOffest: {x: 10, y: 80}
+  _forestHeightThreshold: 0.5
+  _swampHeightThreshold: 0.3
+  _riverDirectionCoefficient: 0.5
   _intrabiomThresholds:
-  - 0.66
-  - 0.33
+  - 0.55
+  - 0.2
   - 0
   _forestTiles:
   - {fileID: 5161391500831897597, guid: f5dc9a28f7eb7814e84a083458da661f, type: 3}
@@ -393,6 +394,7 @@ MonoBehaviour:
   - {fileID: 3826399123676527389, guid: 848110495629a1642a815d7baab9e89a, type: 3}
   - {fileID: 297106901999755880, guid: 6ec640546bb736e4c86ebe6e3f2f6253, type: 3}
   - {fileID: 7434066152070971964, guid: 33998397bde545c4597a93884aa4a120, type: 3}
+  _riverTile: {fileID: 1512909167979149776, guid: b3391d0e658af644fa7df6d2380a5e75, type: 3}
 --- !u!4 &734102731
 Transform:
   m_ObjectHideFlags: 0
