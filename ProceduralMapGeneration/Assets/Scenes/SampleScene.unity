@@ -229,7 +229,7 @@ Camera:
   far clip plane: 1000
   field of view: 34
   orthographic: 1
-  orthographic size: 10
+  orthographic size: 40
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -371,16 +371,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 47e8fd8d31cc7aa44b0d8590a0b8f11c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _mapWidth: 36
-  _mapHeight: 20
-  _biomeSizes: 8
-  _mapOffest: {x: 10, y: 80}
-  _forestHeightThreshold: 0.5
-  _swampHeightThreshold: 0.3
+  _mapWidth: 144
+  _mapHeight: 80
+  _noiseType: 0
+  _biomeSizes: 10
+  _mapOffest: {x: 144, y: 160}
+  _forestHeightThreshold: 0.55
+  _swampHeightThreshold: 0.4
   _riverDirectionCoefficient: 0.5
   _intrabiomThresholds:
-  - 0.55
-  - 0.2
+  - 0.65
+  - 0.25
   - 0
   _forestTiles:
   - {fileID: 5161391500831897597, guid: f5dc9a28f7eb7814e84a083458da661f, type: 3}

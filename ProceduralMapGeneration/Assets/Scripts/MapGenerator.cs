@@ -2,11 +2,14 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Unity.Mathematics;
 
 public class MapGenerator : MonoBehaviour
 {
-    [SerializeField, Range(0, 100)]
+    [SerializeField, Range(0, 200)]
     private int _mapWidth, _mapHeight;
+    [SerializeField]
+    private NoiseType _noiseType;
     [SerializeField, Range(5, 20)]
     private float _biomeSizes;
     [SerializeField]
@@ -25,7 +28,7 @@ public class MapGenerator : MonoBehaviour
 
     private Dictionary<float, GameObject[]> _biomesByHeightThreshold = new Dictionary<float, GameObject[]>();
     private bool[,] _occupiedMapPositions;
-    private float[,] _perlinMap;
+    private float[,] _noiseMap;
     private List<Vector2Int> _mountainPeaks = new List<Vector2Int>();
     private List<Vector2Int> _lakeBottoms = new List<Vector2Int>();
     private Vector2Int[] _neighbourTileDirections;
@@ -47,21 +50,21 @@ public class MapGenerator : MonoBehaviour
 
     private void FindMountainsAndLakes()
     {
-        float perlinValue;
+        float noiseValue;
         for (int x = 0; x < _mapWidth; x++)
         {
             for (int y = 0; y < _mapHeight; y++)
             {
-                perlinValue = _perlinMap[x, y];
-                if (perlinValue >= _intrabiomThresholds[0] * (1 - _forestHeightThreshold) + _forestHeightThreshold)
+                noiseValue = _noiseMap[x, y];
+                if (noiseValue >= _intrabiomThresholds[0] * (1 - _forestHeightThreshold) + _forestHeightThreshold)
                 {
-                    if (CompareToNeighbours(x, y, perlinValue, true))
+                    if (CompareToNeighbours(x, y, noiseValue, true))
                         _mountainPeaks.Add(new Vector2Int(x,y));
                     continue;
                 }
-                if (perlinValue < _swampHeightThreshold)
+                if (noiseValue < _swampHeightThreshold)
                 {
-                    if (CompareToNeighbours(x, y, perlinValue, false))
+                    if (CompareToNeighbours(x, y, noiseValue, false))
                         _lakeBottoms.Add(new Vector2Int(x, y));
                     continue;
                 }
@@ -77,9 +80,9 @@ public class MapGenerator : MonoBehaviour
             neighbourPosition = new Vector2Int(x + direction.x, y + direction.y);
             if (!WithinBounds(neighbourPosition))
                 continue;
-            if (findHigher && (_perlinMap[neighbourPosition.x, neighbourPosition.y] > height))
+            if (findHigher && (_noiseMap[neighbourPosition.x, neighbourPosition.y] > height))
                 return false;
-            else if (!findHigher && (_perlinMap[neighbourPosition.x, neighbourPosition.y] < height))
+            else if (!findHigher && (_noiseMap[neighbourPosition.x, neighbourPosition.y] < height))
                 return false;
         }
         return true;
@@ -129,12 +132,12 @@ public class MapGenerator : MonoBehaviour
             {
                 currentTile = start + directionCandidates[i];
                 if (WithinBounds(currentTile) && !_occupiedMapPositions[currentTile.x, currentTile.y] &&
-                    _perlinMap[currentTile.x, currentTile.y] < _perlinMap[lowestTile.x, lowestTile.y])
+                    _noiseMap[currentTile.x, currentTile.y] < _noiseMap[lowestTile.x, lowestTile.y])
                 {
                     lowestTile = currentTile;
                 }
             }
-            currentTileHeight = _perlinMap[lowestTile.x, lowestTile.y];
+            currentTileHeight = _noiseMap[lowestTile.x, lowestTile.y];
             start.x = lowestTile.x; start.y = lowestTile.y;
 
             if (currentTileHeight >= _swampHeightThreshold)
@@ -157,29 +160,29 @@ public class MapGenerator : MonoBehaviour
             {
                 if (!_occupiedMapPositions[x,y])
                 {
-                    Instantiate(GetTileUsingPerlinMap(x, y), new Vector2(x,y), Quaternion.identity, transform);
+                    Instantiate(GetTileUsingNoiseMap(x, y), new Vector2(x,y), Quaternion.identity, transform);
                     _occupiedMapPositions[x,y] = true;
                 }
             }
         }
     }
 
-    private GameObject GetTileUsingPerlinMap(int x, int y)
+    private GameObject GetTileUsingNoiseMap(int x, int y)
     {
-        var perlinValue = _perlinMap[x,y];
+        var noiseValue = _noiseMap[x,y];
         float previousThreshold = 1f;
         foreach (var biomeByThreshold in _biomesByHeightThreshold)
         {
-            if (biomeByThreshold.Key <= perlinValue)
+            if (biomeByThreshold.Key <= noiseValue)
             {
-                perlinValue = (perlinValue - biomeByThreshold.Key) / (previousThreshold - biomeByThreshold.Key);
+                noiseValue = (noiseValue - biomeByThreshold.Key) / (previousThreshold - biomeByThreshold.Key);
                 for (int i = 0; i < _intrabiomThresholds.Length; i++)
-                    if (_intrabiomThresholds[i] <= perlinValue)
+                    if (_intrabiomThresholds[i] <= noiseValue)
                         return biomeByThreshold.Value[i];
             }
             previousThreshold = biomeByThreshold.Key;
         }
-        Debug.LogError(nameof(GetTileUsingPerlinMap) + " didn't find proper tile!");
+        Debug.LogError(nameof(GetTileUsingNoiseMap) + " didn't find proper tile!");
         return null;
     }
 
@@ -202,10 +205,28 @@ public class MapGenerator : MonoBehaviour
         _biomesByHeightThreshold.Add(_swampHeightThreshold, _swampTiles);
         _biomesByHeightThreshold.Add(0f, _seaTiles);
         _occupiedMapPositions = new bool[_mapWidth, _mapHeight];
-        _perlinMap = new float[_mapWidth, _mapHeight];
+        _noiseMap = new float[_mapWidth, _mapHeight];
         for (int x = 0; x < _mapWidth; x++)
+        {
             for (int y = 0; y < _mapHeight; y++)
-                _perlinMap[x,y] = Mathf.Clamp01(Mathf.PerlinNoise((x + _mapOffest.x) / _biomeSizes, (y + _mapOffest.y) / _biomeSizes));
+            {
+                switch (_noiseType)
+                {
+                    case NoiseType.Perlin:
+                        _noiseMap[x, y] = (noise.cnoise(new float2((x + _mapOffest.x) / _biomeSizes, (y + _mapOffest.y) / _biomeSizes)) + 1) / 2f;
+                        break;
+                    case NoiseType.Simplex:
+                        _noiseMap[x, y] = (noise.snoise(new float2((x + _mapOffest.x) / _biomeSizes, (y + _mapOffest.y) / _biomeSizes)) + 1) / 2f;
+                        break;
+                    case NoiseType.Worley:
+                        _noiseMap[x, y] = noise.cellular2x2(new float2((x + _mapOffest.x) / _biomeSizes, (y + _mapOffest.y) / _biomeSizes)).x;
+                        break;
+                    default:
+                        _noiseMap[x,y] = (noise.cnoise(new float2((x + _mapOffest.x) / _biomeSizes, (y + _mapOffest.y) / _biomeSizes)) + 1) / 2f;
+                        break;
+                }
+            }
+        }
         _neighbourTileDirections = new Vector2Int[]
         {
             new Vector2Int(0,1), new Vector2Int(1,1), new Vector2Int(1,0), new Vector2Int(1,-1),
@@ -223,4 +244,6 @@ public class MapGenerator : MonoBehaviour
             new Vector2Int[]{_neighbourTileDirections[6], _neighbourTileDirections[7], _neighbourTileDirections[0]}
         };
     }
+
+        private enum NoiseType { Perlin, Simplex, Worley}
 }
